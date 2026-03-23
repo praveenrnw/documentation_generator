@@ -18,8 +18,16 @@ extension AiProviderX on AiProvider {
   bool get requiresApiKey => this != AiProvider.ollama;
 }
 
+class ConnectionResult {
+  final bool connected;
+  final String? error;
+
+  const ConnectionResult.success() : connected = true, error = null;
+  const ConnectionResult.failure(this.error) : connected = false;
+}
+
 abstract class AiService {
-  Future<bool> checkConnection();
+  Future<ConnectionResult> checkConnection();
   Future<List<String>> listModels();
   Future<String> analyzeImage({
     required Uint8List imageBytes,

@@ -26,15 +26,61 @@ class GeminiService implements AiService {
   }
 
   @override
-  Future<bool> checkConnection() async {
+  Future<ConnectionResult> checkConnection() async {
+    if (apiKey.isEmpty) {
+      return const ConnectionResult.failure(
+        'API key is empty. Enter your Gemini API key.',
+      );
+    }
     try {
       final response = await _dio.get(
         '/models',
         queryParameters: {'key': apiKey},
       );
-      return response.statusCode == 200;
-    } catch (_) {
-      return false;
+      if (response.statusCode == 200) {
+        return const ConnectionResult.success();
+      }
+      return ConnectionResult.failure(
+        'Unexpected status: ${response.statusCode}',
+      );
+    } on DioException catch (e) {
+      final statusCode = e.response?.statusCode;
+      final responseBody = e.response?.data;
+
+      // Extract API error message if available
+      String? apiMessage;
+      if (responseBody is Map) {
+        apiMessage = responseBody['error']?['message'] as String?;
+      }
+
+      if (statusCode == 400) {
+        return ConnectionResult.failure(
+          'Bad request (400): ${apiMessage ?? 'Invalid API key. Check your Gemini key at https://aistudio.google.com'}',
+        );
+      }
+      if (statusCode == 403) {
+        return ConnectionResult.failure(
+          'Forbidden (403): ${apiMessage ?? 'API key does not have permission. Enable the Generative Language API.'}',
+        );
+      }
+      if (statusCode == 404) {
+        return ConnectionResult.failure(
+          'Not found (404): ${apiMessage ?? 'API endpoint not found. The API version may have changed.'}',
+        );
+      }
+      if (statusCode != null) {
+        return ConnectionResult.failure(
+          'HTTP $statusCode: ${apiMessage ?? responseBody ?? e.message}',
+        );
+      }
+
+      // No HTTP response — network-level error
+      final rawError = e.error?.toString() ?? e.message ?? 'Unknown error';
+      return ConnectionResult.failure(
+        'Network error (${e.type.name}): $rawError',
+      );
+    } catch (e) {
+      return ConnectionResult.failure('Unexpected error: $e');
     }
   }
 

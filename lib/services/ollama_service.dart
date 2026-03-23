@@ -27,12 +27,29 @@ class OllamaService implements AiService {
   }
 
   @override
-  Future<bool> checkConnection() async {
+  Future<ConnectionResult> checkConnection() async {
     try {
       final response = await _dio.get('$baseUrl/api/tags');
-      return response.statusCode == 200;
-    } catch (_) {
-      return false;
+      if (response.statusCode == 200) {
+        return const ConnectionResult.success();
+      }
+      return ConnectionResult.failure(
+        'Unexpected status: ${response.statusCode}',
+      );
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.connectionError) {
+        return ConnectionResult.failure(
+          'Cannot connect to Ollama at $baseUrl. Is Ollama running? Try: ollama serve',
+        );
+      }
+      if (e.type == DioExceptionType.connectionTimeout) {
+        return ConnectionResult.failure(
+          'Connection timed out. Check if Ollama is running at $baseUrl',
+        );
+      }
+      return ConnectionResult.failure('Connection failed: ${e.message}');
+    } catch (e) {
+      return ConnectionResult.failure('Unexpected error: $e');
     }
   }
 

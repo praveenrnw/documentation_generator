@@ -32,12 +32,40 @@ class OpenAiService implements AiService {
   }
 
   @override
-  Future<bool> checkConnection() async {
+  Future<ConnectionResult> checkConnection() async {
+    if (apiKey.isEmpty) {
+      return const ConnectionResult.failure(
+        'API key is empty. Enter your OpenAI API key.',
+      );
+    }
     try {
       final response = await _dio.get('/models');
-      return response.statusCode == 200;
-    } catch (_) {
-      return false;
+      if (response.statusCode == 200) {
+        return const ConnectionResult.success();
+      }
+      return ConnectionResult.failure(
+        'Unexpected status: ${response.statusCode}',
+      );
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        return const ConnectionResult.failure(
+          'Invalid API key. Check your OpenAI key at https://platform.openai.com',
+        );
+      }
+      if (e.response?.statusCode == 429) {
+        return const ConnectionResult.failure(
+          'Rate limited or quota exceeded. Check your OpenAI billing.',
+        );
+      }
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.connectionError) {
+        return const ConnectionResult.failure(
+          'Cannot reach OpenAI API. Check your internet connection.',
+        );
+      }
+      return ConnectionResult.failure('Connection failed: ${e.message}');
+    } catch (e) {
+      return ConnectionResult.failure('Unexpected error: $e');
     }
   }
 

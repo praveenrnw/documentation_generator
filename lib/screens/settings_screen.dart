@@ -20,6 +20,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _apiKeyController;
   bool _isConnected = false;
   bool _isChecking = false;
+  String? _connectionError;
 
   @override
   void initState() {
@@ -48,12 +49,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _checkConnection() async {
-    setState(() => _isChecking = true);
+    setState(() {
+      _isChecking = true;
+      _connectionError = null;
+    });
     final settings = context.read<SettingsProvider>();
     final service = _createService(settings);
 
-    final connected = await service.checkConnection();
-    if (connected) {
+    final result = await service.checkConnection();
+    if (result.connected) {
       final models = await service.listModels();
       if (mounted) {
         settings.setAvailableModels(models);
@@ -62,7 +66,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     if (mounted) {
       setState(() {
-        _isConnected = connected;
+        _isConnected = result.connected;
+        _connectionError = result.error;
         _isChecking = false;
       });
     }
@@ -182,16 +187,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ],
                 ),
               ),
-              if (!_isChecking)
+              if (!_isChecking) ...[
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    _isConnected ? 'Connected' : 'Not connected',
-                    style: context.textTheme.bodySmall?.copyWith(
-                      color: _isConnected ? Colors.green : Colors.red,
-                    ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _isConnected ? Icons.check_circle : Icons.error_outline,
+                        size: 16,
+                        color: _isConnected ? Colors.green : Colors.red,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        _isConnected
+                            ? 'Connected successfully'
+                            : 'Not connected',
+                        style: context.textTheme.bodySmall?.copyWith(
+                          color: _isConnected ? Colors.green : Colors.red,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+                if (_connectionError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      _connectionError!,
+                      style: context.textTheme.bodySmall?.copyWith(
+                        color: context.colorScheme.error,
+                      ),
+                    ),
+                  ),
+              ],
               const SizedBox(height: 24),
 
               // --- AI Model ---
