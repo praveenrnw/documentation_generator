@@ -3,11 +3,12 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
+import '../core/ui.dart';
 import '../providers/guide_provider.dart';
 import 'processing_screen.dart';
 import 'settings_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatelessWidget with NavigationMixin {
   const HomeScreen({super.key});
 
   @override
@@ -18,10 +19,7 @@ class HomeScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SettingsScreen()),
-            ),
+            onPressed: () => pushScreen(context, const SettingsScreen()),
           ),
         ],
       ),
@@ -34,19 +32,19 @@ class HomeScreen extends StatelessWidget {
               Icon(
                 Icons.auto_stories,
                 size: 80,
-                color: Theme.of(context).colorScheme.primary,
+                color: context.colorScheme.primary,
               ),
               const SizedBox(height: 24),
               Text(
                 'Documentation Generator',
-                style: Theme.of(context).textTheme.headlineMedium,
+                style: context.textTheme.headlineMedium,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
               Text(
                 'Upload a video or screenshots and let AI\ngenerate a user guide for you.',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                style: context.textTheme.bodyLarge?.copyWith(
+                  color: context.colorScheme.onSurfaceVariant,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -81,10 +79,7 @@ class HomeScreen extends StatelessWidget {
       final guide = context.read<GuideProvider>();
       guide.reset();
       guide.processVideo(result.files.single.path!);
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const ProcessingScreen()),
-      );
+      pushScreen(context, const ProcessingScreen());
     }
   }
 
@@ -107,10 +102,7 @@ class HomeScreen extends StatelessWidget {
         final guide = context.read<GuideProvider>();
         guide.reset();
         guide.processImages(images);
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const ProcessingScreen()),
-        );
+        pushScreen(context, const ProcessingScreen());
       }
     }
   }

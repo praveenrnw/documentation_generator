@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../core/ui.dart';
 import '../providers/settings_provider.dart';
 import '../services/ollama_service.dart';
 
@@ -62,10 +63,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              Text(
-                'Ollama Connection',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
+              Text('Ollama Connection', style: context.textTheme.titleMedium),
               const SizedBox(height: 12),
               TextField(
                 controller: _urlController,
@@ -102,7 +100,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 24),
 
-              Text('AI Model', style: Theme.of(context).textTheme.titleMedium),
+              Text('AI Model', style: context.textTheme.titleMedium),
               const SizedBox(height: 12),
               if (settings.availableModels.isNotEmpty)
                 DropdownButtonFormField<String>(
@@ -134,10 +132,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               const SizedBox(height: 24),
 
-              Text(
-                'Frame Extraction',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
+              Text('Frame Extraction', style: context.textTheme.titleMedium),
               const SizedBox(height: 12),
               ListTile(
                 title: const Text('Frame Interval'),
@@ -184,12 +179,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         children: [
                           Icon(
                             Icons.info_outline,
-                            color: Theme.of(context).colorScheme.primary,
+                            color: context.colorScheme.primary,
                           ),
                           const SizedBox(width: 8),
                           Text(
                             'Setup Guide',
-                            style: Theme.of(context).textTheme.titleSmall,
+                            style: context.textTheme.titleSmall,
                           ),
                         ],
                       ),

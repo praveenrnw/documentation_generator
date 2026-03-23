@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../core/ui.dart';
 import '../providers/guide_provider.dart';
 import 'editor_screen.dart';
 
-class ProcessingScreen extends StatelessWidget {
+class ProcessingScreen extends StatelessWidget with NavigationMixin {
   const ProcessingScreen({super.key});
 
   @override
@@ -23,10 +24,7 @@ class ProcessingScreen extends StatelessWidget {
         builder: (context, guide, _) {
           if (guide.state == ProcessingState.done) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const EditorScreen()),
-              );
+              pushReplacementScreen(context, const EditorScreen());
             });
           }
 
@@ -40,18 +38,18 @@ class ProcessingScreen extends StatelessWidget {
                     Icon(
                       Icons.error_outline,
                       size: 64,
-                      color: Theme.of(context).colorScheme.error,
+                      color: context.colorScheme.error,
                     ),
                     const SizedBox(height: 16),
                     Text(
                       'Something went wrong',
-                      style: Theme.of(context).textTheme.headlineSmall,
+                      style: context.textTheme.headlineSmall,
                     ),
                     const SizedBox(height: 8),
                     Text(
                       guide.errorMessage ?? 'Unknown error',
                       textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyMedium,
+                      style: context.textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 24),
                     FilledButton(
@@ -77,12 +75,12 @@ class ProcessingScreen extends StatelessWidget {
                   const SizedBox(height: 32),
                   Text(
                     _getStateTitle(guide.state),
-                    style: Theme.of(context).textTheme.titleLarge,
+                    style: context.textTheme.titleLarge,
                   ),
                   const SizedBox(height: 12),
                   Text(
                     guide.statusMessage,
-                    style: Theme.of(context).textTheme.bodyMedium,
+                    style: context.textTheme.bodyMedium,
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 24),

@@ -1,10 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../core/ui.dart';
 import '../providers/guide_provider.dart';
 import '../widgets/step_card.dart';
 
-class EditorScreen extends StatelessWidget {
+class EditorScreen extends StatelessWidget with SnackBarMixin {
   const EditorScreen({super.key});
 
   @override
@@ -61,7 +62,7 @@ class EditorScreen extends StatelessWidget {
               children: [
                 TextFormField(
                   initialValue: guide.title,
-                  style: Theme.of(context).textTheme.headlineSmall,
+                  style: context.textTheme.headlineSmall,
                   decoration: const InputDecoration(
                     labelText: 'Guide Title',
                     border: OutlineInputBorder(),
@@ -81,7 +82,7 @@ class EditorScreen extends StatelessWidget {
                 const SizedBox(height: 16),
                 Text(
                   'Steps (${guide.steps.length})',
-                  style: Theme.of(context).textTheme.titleMedium,
+                  style: context.textTheme.titleMedium,
                 ),
                 const SizedBox(height: 8),
                 Expanded(
@@ -125,21 +126,18 @@ class EditorScreen extends StatelessWidget {
       }
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Exported to: $path'),
-            action: SnackBarAction(
-              label: 'Open',
-              onPressed: () => Process.run('open', [path]),
-            ),
+        showSnackBar(
+          context,
+          'Exported to: $path',
+          action: SnackBarAction(
+            label: 'Open',
+            onPressed: () => Process.run('open', [path]),
           ),
         );
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Export failed: $e')));
+        showErrorSnackBar(context, 'Export failed: $e');
       }
     }
   }

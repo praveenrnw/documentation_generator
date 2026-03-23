@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/ui.dart';
 import '../models/guide_step.dart';
 
 class StepCard extends StatelessWidget {
@@ -33,7 +34,7 @@ class StepCard extends StatelessWidget {
                 Expanded(
                   child: TextFormField(
                     initialValue: step.title,
-                    style: Theme.of(context).textTheme.titleSmall,
+                    style: context.textTheme.titleSmall,
                     decoration: const InputDecoration(
                       isDense: true,
                       border: InputBorder.none,
@@ -46,7 +47,7 @@ class StepCard extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.delete_outline),
                   onPressed: onDelete,
-                  color: Theme.of(context).colorScheme.error,
+                  color: context.colorScheme.error,
                 ),
               ],
             ),
@@ -78,8 +79,8 @@ class StepCard extends StatelessWidget {
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
                   'Timestamp: ${_formatDuration(step.timestamp)}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  style: context.textTheme.bodySmall?.copyWith(
+                    color: context.colorScheme.onSurfaceVariant,
                   ),
                 ),
               ),
