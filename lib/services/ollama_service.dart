@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:dio/dio.dart';
+import 'ai_service.dart';
 
-class OllamaService {
+class OllamaService implements AiService {
   late Dio _dio;
   String baseUrl;
   String model;
@@ -19,11 +20,13 @@ class OllamaService {
     );
   }
 
-  void updateConfig({String? baseUrl, String? model}) {
+  @override
+  void updateConfig({String? baseUrl, String? model, String? apiKey}) {
     if (baseUrl != null) this.baseUrl = baseUrl;
     if (model != null) this.model = model;
   }
 
+  @override
   Future<bool> checkConnection() async {
     try {
       final response = await _dio.get('$baseUrl/api/tags');
@@ -33,6 +36,7 @@ class OllamaService {
     }
   }
 
+  @override
   Future<List<String>> listModels() async {
     try {
       final response = await _dio.get('$baseUrl/api/tags');
@@ -45,6 +49,7 @@ class OllamaService {
     }
   }
 
+  @override
   Future<String> analyzeImage({
     required Uint8List imageBytes,
     required String prompt,
@@ -69,6 +74,7 @@ class OllamaService {
     return response.data['message']['content'] as String;
   }
 
+  @override
   Future<String> generateText(String prompt) async {
     final response = await _dio.post(
       '$baseUrl/api/chat',

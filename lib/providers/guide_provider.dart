@@ -4,7 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import '../models/guide_step.dart';
 import '../models/user_guide.dart';
+import '../services/ai_service.dart';
 import '../services/ollama_service.dart';
+import '../services/openai_service.dart';
+import '../services/gemini_service.dart';
 import '../services/video_processing_service.dart';
 import '../services/export_service.dart';
 import 'settings_provider.dart';
@@ -20,7 +23,7 @@ enum ProcessingState {
 
 class GuideProvider extends ChangeNotifier {
   final SettingsProvider _settings;
-  late OllamaService _ollamaService;
+  late AiService _aiService;
   final VideoProcessingService _videoService = VideoProcessingService();
   final ExportService _exportService = ExportService();
   final _uuid = const Uuid();
@@ -38,18 +41,29 @@ class GuideProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   GuideProvider(this._settings) {
-    _ollamaService = OllamaService(
-      baseUrl: _settings.ollamaUrl,
-      model: _settings.model,
-    );
+    _aiService = _createService();
     _settings.addListener(_onSettingsChanged);
   }
 
+  AiService _createService() {
+    return switch (_settings.aiProvider) {
+      AiProvider.ollama => OllamaService(
+        baseUrl: _settings.ollamaUrl,
+        model: _settings.model,
+      ),
+      AiProvider.openAi => OpenAiService(
+        apiKey: _settings.apiKey,
+        model: _settings.model,
+      ),
+      AiProvider.gemini => GeminiService(
+        apiKey: _settings.apiKey,
+        model: _settings.model,
+      ),
+    };
+  }
+
   void _onSettingsChanged() {
-    _ollamaService.updateConfig(
-      baseUrl: _settings.ollamaUrl,
-      model: _settings.model,
-    );
+    _aiService = _createService();
   }
 
   Future<void> processVideo(String videoPath) async {
@@ -117,7 +131,7 @@ class GuideProvider extends ChangeNotifier {
       _progress = i / frames.length;
       notifyListeners();
 
-      final analysis = await _ollamaService.analyzeImage(
+      final analysis = await _aiService.analyzeImage(
         imageBytes: frames[i].bytes,
         prompt: _buildFrameAnalysisPrompt(i, frames.length),
       );
@@ -134,7 +148,7 @@ class GuideProvider extends ChangeNotifier {
     _progress = 0.9;
     notifyListeners();
 
-    final guideJson = await _ollamaService.generateText(
+    final guideJson = await _aiService.generateText(
       _buildGuideCompilationPrompt(analyses),
     );
 
