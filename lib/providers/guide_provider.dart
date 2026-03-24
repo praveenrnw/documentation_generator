@@ -33,12 +33,19 @@ class GuideProvider extends ChangeNotifier {
   double _progress = 0;
   UserGuide? _currentGuide;
   String? _errorMessage;
+  final List<String> _logs = [];
 
   ProcessingState get state => _state;
   String get statusMessage => _statusMessage;
   double get progress => _progress;
   UserGuide? get currentGuide => _currentGuide;
   String? get errorMessage => _errorMessage;
+  List<String> get logs => List.unmodifiable(_logs);
+
+  void _log(String message) {
+    _logs.add(message);
+    notifyListeners();
+  }
 
   GuideProvider(this._settings) {
     _aiService = _createService();
@@ -68,23 +75,35 @@ class GuideProvider extends ChangeNotifier {
 
   Future<void> processVideo(String videoPath) async {
     try {
+      _logs.clear();
+      _log('Starting video processing...');
+      _log('Provider: ${_settings.aiProvider.displayName}');
+      _log('Model: ${_settings.model}');
+      _log(
+        'Frame interval: ${_settings.frameInterval}s, max frames: ${_settings.maxFrames}',
+      );
+
       _state = ProcessingState.extractingFrames;
       _statusMessage = 'Extracting frames from video...';
       _progress = 0;
       notifyListeners();
 
+      _log('Extracting frames from video...');
       final frames = await _videoService.extractFrames(
         videoPath: videoPath,
         intervalSeconds: _settings.frameInterval,
         maxFrames: _settings.maxFrames,
       );
+      _log('Extracted ${frames.length} frames from video');
 
       if (frames.isEmpty) {
+        _log('Error: No frames could be extracted');
         throw Exception('No frames could be extracted from the video');
       }
 
       await _analyzeAndBuildGuide(frames);
     } catch (e) {
+      _log('Error: $e');
       _state = ProcessingState.error;
       _errorMessage = e.toString();
       _statusMessage = 'Error: $e';
@@ -94,11 +113,18 @@ class GuideProvider extends ChangeNotifier {
 
   Future<void> processImages(List<Uint8List> images) async {
     try {
+      _logs.clear();
+      _log('Starting image processing...');
+      _log('Provider: ${_settings.aiProvider.displayName}');
+      _log('Model: ${_settings.model}');
+      _log('Number of images: ${images.length}');
+
       _state = ProcessingState.analyzingFrames;
       _statusMessage = 'Preparing images...';
       _progress = 0;
       notifyListeners();
 
+      _log('Preparing ${images.length} images for analysis...');
       final frames = images
           .asMap()
           .entries
@@ -113,6 +139,7 @@ class GuideProvider extends ChangeNotifier {
 
       await _analyzeAndBuildGuide(frames);
     } catch (e) {
+      _log('Error: $e');
       _state = ProcessingState.error;
       _errorMessage = e.toString();
       _statusMessage = 'Error: $e';
@@ -122,6 +149,7 @@ class GuideProvider extends ChangeNotifier {
 
   Future<void> _analyzeAndBuildGuide(List<ExtractedFrame> frames) async {
     _state = ProcessingState.analyzingFrames;
+    _log('Starting AI analysis of ${frames.length} frames...');
     notifyListeners();
 
     final analyses = <Map<String, dynamic>>[];
@@ -129,12 +157,16 @@ class GuideProvider extends ChangeNotifier {
     for (int i = 0; i < frames.length; i++) {
       _statusMessage = 'Analyzing frame ${i + 1} of ${frames.length}...';
       _progress = i / frames.length;
+      _log(
+        'Sending frame ${i + 1}/${frames.length} to AI (${(frames[i].bytes.length / 1024).toStringAsFixed(1)} KB)...',
+      );
       notifyListeners();
 
       final analysis = await _aiService.analyzeImage(
         imageBytes: frames[i].bytes,
         prompt: _buildFrameAnalysisPrompt(i, frames.length),
       );
+      _log('Frame ${i + 1} analyzed — ${analysis.length} chars returned');
 
       analyses.add({
         'index': i,
@@ -146,17 +178,23 @@ class GuideProvider extends ChangeNotifier {
     _state = ProcessingState.generatingGuide;
     _statusMessage = 'Generating user guide...';
     _progress = 0.9;
+    _log('All frames analyzed. Generating structured guide...');
     notifyListeners();
 
     final guideJson = await _aiService.generateText(
       _buildGuideCompilationPrompt(analyses),
     );
+    _log('Guide JSON received — ${guideJson.length} chars');
+    _log('Parsing guide response...');
 
     final guide = _parseGuideResponse(guideJson, frames);
     _currentGuide = guide;
     _state = ProcessingState.done;
     _statusMessage = 'Guide generated successfully!';
     _progress = 1.0;
+    _log(
+      'Done! Guide "${guide.title}" created with ${guide.steps.length} steps',
+    );
     notifyListeners();
   }
 
@@ -336,6 +374,7 @@ class GuideProvider extends ChangeNotifier {
     _progress = 0;
     _currentGuide = null;
     _errorMessage = null;
+    _logs.clear();
     notifyListeners();
   }
 

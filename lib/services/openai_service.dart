@@ -94,42 +94,70 @@ class OpenAiService implements AiService {
   }) async {
     final base64Image = base64Encode(imageBytes);
 
-    final response = await _dio.post(
-      '/chat/completions',
-      data: {
-        'model': model,
-        'messages': [
-          {
-            'role': 'user',
-            'content': [
-              {'type': 'text', 'text': prompt},
-              {
-                'type': 'image_url',
-                'image_url': {'url': 'data:image/png;base64,$base64Image'},
-              },
-            ],
-          },
-        ],
-        'max_tokens': 1024,
-      },
-    );
+    try {
+      final response = await _dio.post(
+        '/chat/completions',
+        data: {
+          'model': model,
+          'messages': [
+            {
+              'role': 'user',
+              'content': [
+                {'type': 'text', 'text': prompt},
+                {
+                  'type': 'image_url',
+                  'image_url': {'url': 'data:image/png;base64,$base64Image'},
+                },
+              ],
+            },
+          ],
+          'max_tokens': 1024,
+        },
+      );
 
-    return response.data['choices'][0]['message']['content'] as String;
+      return response.data['choices'][0]['message']['content'] as String;
+    } on DioException catch (e) {
+      throw Exception(_describeError(e));
+    }
   }
 
   @override
   Future<String> generateText(String prompt) async {
-    final response = await _dio.post(
-      '/chat/completions',
-      data: {
-        'model': model,
-        'messages': [
-          {'role': 'user', 'content': prompt},
-        ],
-        'max_tokens': 2048,
-      },
-    );
+    try {
+      final response = await _dio.post(
+        '/chat/completions',
+        data: {
+          'model': model,
+          'messages': [
+            {'role': 'user', 'content': prompt},
+          ],
+          'max_tokens': 2048,
+        },
+      );
 
-    return response.data['choices'][0]['message']['content'] as String;
+      return response.data['choices'][0]['message']['content'] as String;
+    } on DioException catch (e) {
+      throw Exception(_describeError(e));
+    }
+  }
+
+  String _describeError(DioException e) {
+    final status = e.response?.statusCode;
+    if (status == 401) return 'Invalid API key. Check your OpenAI key.';
+    if (status == 404)
+      return 'Model "$model" not found. Check the model name in Settings.';
+    if (status == 429)
+      return 'Rate limit or quota exceeded. Check your OpenAI billing.';
+    if (e.type == DioExceptionType.connectionError ||
+        e.type == DioExceptionType.connectionTimeout) {
+      return 'Cannot reach OpenAI API. Check your internet connection.';
+    }
+    if (e.response != null) {
+      final body = e.response?.data;
+      String? apiMsg;
+      if (body is Map) apiMsg = (body['error'] as Map?)?['message'] as String?;
+      return 'OpenAI error ($status): ${apiMsg ?? body}';
+    }
+    return 'OpenAI request failed: ${e.message}';
   }
 }

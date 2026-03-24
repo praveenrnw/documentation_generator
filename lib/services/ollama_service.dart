@@ -73,37 +73,61 @@ class OllamaService implements AiService {
   }) async {
     final base64Image = base64Encode(imageBytes);
 
-    final response = await _dio.post(
-      '$baseUrl/api/chat',
-      data: {
-        'model': model,
-        'messages': [
-          {
-            'role': 'user',
-            'content': prompt,
-            'images': [base64Image],
-          },
-        ],
-        'stream': false,
-      },
-    );
+    try {
+      final response = await _dio.post(
+        '$baseUrl/api/chat',
+        data: {
+          'model': model,
+          'messages': [
+            {
+              'role': 'user',
+              'content': prompt,
+              'images': [base64Image],
+            },
+          ],
+          'stream': false,
+        },
+      );
 
-    return response.data['message']['content'] as String;
+      return response.data['message']['content'] as String;
+    } on DioException catch (e) {
+      throw Exception(_describeError(e));
+    }
   }
 
   @override
   Future<String> generateText(String prompt) async {
-    final response = await _dio.post(
-      '$baseUrl/api/chat',
-      data: {
-        'model': model,
-        'messages': [
-          {'role': 'user', 'content': prompt},
-        ],
-        'stream': false,
-      },
-    );
+    try {
+      final response = await _dio.post(
+        '$baseUrl/api/chat',
+        data: {
+          'model': model,
+          'messages': [
+            {'role': 'user', 'content': prompt},
+          ],
+          'stream': false,
+        },
+      );
 
-    return response.data['message']['content'] as String;
+      return response.data['message']['content'] as String;
+    } on DioException catch (e) {
+      throw Exception(_describeError(e));
+    }
+  }
+
+  String _describeError(DioException e) {
+    if (e.response?.statusCode == 404) {
+      return 'Model "$model" not found. Pull it first: ollama pull $model';
+    }
+    if (e.type == DioExceptionType.connectionError ||
+        e.type == DioExceptionType.connectionTimeout) {
+      return 'Cannot connect to Ollama at $baseUrl. Is it running? Try: ollama serve';
+    }
+    if (e.response != null) {
+      final body = e.response?.data;
+      final msg = body is Map ? body['error'] ?? body : body;
+      return 'Ollama error (${e.response?.statusCode}): $msg';
+    }
+    return 'Ollama request failed: ${e.message}';
   }
 }

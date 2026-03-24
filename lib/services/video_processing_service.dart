@@ -3,22 +3,47 @@ import 'dart:typed_data';
 import 'package:path_provider/path_provider.dart';
 
 class VideoProcessingService {
+  String? _ffmpegPath;
+  String? _ffprobePath;
+
+  Future<String> _findExecutable(String name) async {
+    // Check common installation paths (macOS sandbox can't use `which`)
+    final searchPaths = [
+      '/opt/homebrew/bin/$name', // macOS ARM (Homebrew)
+      '/usr/local/bin/$name', // macOS Intel (Homebrew)
+      '/usr/bin/$name', // Linux system
+      '/snap/bin/$name', // Linux snap
+    ];
+
+    for (final path in searchPaths) {
+      if (await File(path).exists()) return path;
+    }
+
+    // Fallback: try bare name (works if PATH is available)
+    final check = await Process.run(Platform.isWindows ? 'where' : 'which', [
+      name,
+    ]);
+    if (check.exitCode == 0) return name;
+
+    throw Exception(
+      '$name not found. Searched: ${searchPaths.join(', ')}\n'
+      'Install it:\n'
+      '  macOS: brew install ffmpeg\n'
+      '  Linux: sudo apt install ffmpeg',
+    );
+  }
+
+  Future<void> _resolvePaths() async {
+    _ffmpegPath ??= await _findExecutable('ffmpeg');
+    _ffprobePath ??= await _findExecutable('ffprobe');
+  }
+
   Future<List<ExtractedFrame>> extractFrames({
     required String videoPath,
     int intervalSeconds = 3,
     int maxFrames = 20,
   }) async {
-    final isWindows = Platform.isWindows;
-    final checkCmd = isWindows ? 'where' : 'which';
-    final which = await Process.run(checkCmd, ['ffmpeg']);
-    if (which.exitCode != 0) {
-      throw Exception(
-        'ffmpeg not found. Please install ffmpeg:\n'
-        '  macOS: brew install ffmpeg\n'
-        '  Linux: sudo apt install ffmpeg\n'
-        '  Windows: choco install ffmpeg',
-      );
-    }
+    await _resolvePaths();
 
     final duration = await _getVideoDuration(videoPath);
     if (duration == null) {
@@ -44,7 +69,7 @@ class VideoProcessingService {
       final outputPath = '${framesDir.path}/frame_$i.jpg';
       final timestamp = Duration(seconds: i);
 
-      final result = await Process.run('ffmpeg', [
+      final result = await Process.run(_ffmpegPath!, [
         '-ss',
         '$i',
         '-i',
@@ -73,7 +98,7 @@ class VideoProcessingService {
   }
 
   Future<Duration?> _getVideoDuration(String videoPath) async {
-    final result = await Process.run('ffprobe', [
+    final result = await Process.run(_ffprobePath!, [
       '-v',
       'error',
       '-show_entries',

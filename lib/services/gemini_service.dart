@@ -110,44 +110,75 @@ class GeminiService implements AiService {
   }) async {
     final base64Image = base64Encode(imageBytes);
 
-    final response = await _dio.post(
-      '/models/$model:generateContent',
-      queryParameters: {'key': apiKey},
-      data: {
-        'contents': [
-          {
-            'parts': [
-              {'text': prompt},
-              {
-                'inline_data': {'mime_type': 'image/png', 'data': base64Image},
-              },
-            ],
-          },
-        ],
-      },
-    );
+    try {
+      final response = await _dio.post(
+        '/models/$model:generateContent',
+        queryParameters: {'key': apiKey},
+        data: {
+          'contents': [
+            {
+              'parts': [
+                {'text': prompt},
+                {
+                  'inline_data': {
+                    'mime_type': 'image/png',
+                    'data': base64Image,
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      );
 
-    return response.data['candidates'][0]['content']['parts'][0]['text']
-        as String;
+      return response.data['candidates'][0]['content']['parts'][0]['text']
+          as String;
+    } on DioException catch (e) {
+      throw Exception(_describeError(e));
+    }
   }
 
   @override
   Future<String> generateText(String prompt) async {
-    final response = await _dio.post(
-      '/models/$model:generateContent',
-      queryParameters: {'key': apiKey},
-      data: {
-        'contents': [
-          {
-            'parts': [
-              {'text': prompt},
-            ],
-          },
-        ],
-      },
-    );
+    try {
+      final response = await _dio.post(
+        '/models/$model:generateContent',
+        queryParameters: {'key': apiKey},
+        data: {
+          'contents': [
+            {
+              'parts': [
+                {'text': prompt},
+              ],
+            },
+          ],
+        },
+      );
 
-    return response.data['candidates'][0]['content']['parts'][0]['text']
-        as String;
+      return response.data['candidates'][0]['content']['parts'][0]['text']
+          as String;
+    } on DioException catch (e) {
+      throw Exception(_describeError(e));
+    }
+  }
+
+  String _describeError(DioException e) {
+    final status = e.response?.statusCode;
+    final body = e.response?.data;
+    String? apiMsg;
+    if (body is Map) apiMsg = body['error']?['message'] as String?;
+
+    if (status == 400) return 'Bad request: ${apiMsg ?? 'Check your API key.'}';
+    if (status == 403)
+      return 'Forbidden: ${apiMsg ?? 'API key lacks permission.'}';
+    if (status == 404)
+      return 'Model "$model" not found. Check the model name in Settings.';
+    if (status == 429) return 'Quota exceeded. Check your Google AI billing.';
+    if (e.type == DioExceptionType.connectionError ||
+        e.type == DioExceptionType.connectionTimeout) {
+      return 'Cannot reach Gemini API. Check your internet connection.';
+    }
+    if (status != null) return 'Gemini error ($status): ${apiMsg ?? body}';
+    return 'Gemini request failed: ${e.message}';
   }
 }
